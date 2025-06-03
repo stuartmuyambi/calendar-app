@@ -1,27 +1,45 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { isToday, isPast, isFuture, format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay } from "date-fns";
-import { Plus, Edit3, Trash2 } from "lucide-react";
+import { Plus, Edit3, Trash2, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Note, Habit } from "@/utils/storage";
 
 interface CalendarMonthProps {
   year: number;
-  month: number; // 0-based (0 = January)
+  month: number;
   monthName: string;
+  notes: Note[];
+  habits: Habit[];
+  onNoteAdd: (note: Omit<Note, 'id'>) => void;
+  onNoteUpdate: (noteId: string, updates: Partial<Note>) => void;
+  onNoteDelete: (noteId: string) => void;
+  onHabitToggle: (habitId: string, date: string) => void;
+  selectedDate: Date | null;
+  onDateSelect: (date: Date | null) => void;
 }
 
-interface Note {
-  id: string;
-  date: string;
-  text: string;
-  category: 'personal' | 'work' | 'health' | 'other';
-}
-
-const CalendarMonth = ({ year, month, monthName }: CalendarMonthProps) => {
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [notes, setNotes] = useState<Note[]>([]);
+const CalendarMonth = ({ 
+  year, 
+  month, 
+  monthName, 
+  notes, 
+  habits,
+  onNoteAdd, 
+  onNoteUpdate, 
+  onNoteDelete,
+  onHabitToggle,
+  selectedDate,
+  onDateSelect
+}: CalendarMonthProps) => {
   const [newNoteText, setNewNoteText] = useState("");
   const [newNoteCategory, setNewNoteCategory] = useState<Note['category']>('personal');
+  const [newNotePriority, setNewNotePriority] = useState<Note['priority']>('medium');
+  const [newNoteTimeSlot, setNewNoteTimeSlot] = useState("");
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
 
   const monthStart = startOfMonth(new Date(year, month));
   const monthEnd = endOfMonth(new Date(year, month));
@@ -39,36 +57,145 @@ const CalendarMonth = ({ year, month, monthName }: CalendarMonthProps) => {
     other: { color: 'bg-purple-400', label: 'Other' }
   };
 
+  const priorityColors = {
+    high: 'bg-red-500',
+    medium: 'bg-yellow-500',
+    low: 'bg-green-500'
+  };
+
+  const noteTemplates = [
+    { text: "Morning workout", category: 'health' as const, timeSlot: "07:00" },
+    { text: "Team meeting", category: 'work' as const, timeSlot: "10:00" },
+    { text: "Lunch with friends", category: 'personal' as const, timeSlot: "12:00" },
+    { text: "Project review", category: 'work' as const, timeSlot: "14:00" },
+    { text: "Grocery shopping", category: 'personal' as const, timeSlot: "16:00" },
+  ];
+
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
+    if (selectedDate && isSameDay(selectedDate, date)) {
+      onDateSelect(null);
+    } else {
+      onDateSelect(date);
+    }
   };
 
   const addNote = () => {
     if (newNoteText.trim() && selectedDate) {
-      const newNote: Note = {
-        id: Date.now().toString(),
+      const newNote: Omit<Note, 'id'> = {
         date: format(selectedDate, "yyyy-MM-dd"),
         text: newNoteText.trim(),
-        category: newNoteCategory
+        category: newNoteCategory,
+        priority: newNotePriority,
+        timeSlot: newNoteTimeSlot || undefined,
       };
-      setNotes(prev => [...prev, newNote]);
+      onNoteAdd(newNote);
       setNewNoteText("");
+      setNewNoteTimeSlot("");
     }
   };
 
-  const deleteNote = (noteId: string) => {
-    setNotes(prev => prev.filter(note => note.id !== noteId));
+  const addTemplate = (template: typeof noteTemplates[0]) => {
+    if (selectedDate) {
+      const newNote: Omit<Note, 'id'> = {
+        date: format(selectedDate, "yyyy-MM-dd"),
+        text: template.text,
+        category: template.category,
+        priority: 'medium',
+        timeSlot: template.timeSlot,
+      };
+      onNoteAdd(newNote);
+    }
+  };
+
+  const startEditing = (note: Note) => {
+    setEditingNote(note.id);
+    setEditText(note.text);
+  };
+
+  const saveEdit = () => {
+    if (editingNote && editText.trim()) {
+      onNoteUpdate(editingNote, { text: editText.trim() });
+      setEditingNote(null);
+      setEditText("");
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingNote(null);
+    setEditText("");
   };
 
   const getDateNotes = (date: Date) => {
     const dateKey = format(date, "yyyy-MM-dd");
-    return notes.filter(note => note.date === dateKey);
+    return notes
+      .filter(note => note.date === dateKey)
+      .sort((a, b) => {
+        // Sort by time slot first, then by priority
+        if (a.timeSlot && b.timeSlot) {
+          return a.timeSlot.localeCompare(b.timeSlot);
+        }
+        if (a.timeSlot && !b.timeSlot) return -1;
+        if (!a.timeSlot && b.timeSlot) return 1;
+        
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      });
+  };
+
+  const getDateHabits = (date: Date) => {
+    const dateKey = format(date, "yyyy-MM-dd");
+    return habits.filter(habit => habit.completedDates.includes(dateKey));
   };
 
   const getSelectedDateNotes = () => {
     if (!selectedDate) return [];
     return getDateNotes(selectedDate);
   };
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (selectedDate && !editingNote) {
+        let newDate: Date | null = null;
+        
+        switch (e.key) {
+          case 'ArrowLeft':
+            e.preventDefault();
+            newDate = new Date(selectedDate);
+            newDate.setDate(selectedDate.getDate() - 1);
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            newDate = new Date(selectedDate);
+            newDate.setDate(selectedDate.getDate() + 1);
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            newDate = new Date(selectedDate);
+            newDate.setDate(selectedDate.getDate() - 7);
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            newDate = new Date(selectedDate);
+            newDate.setDate(selectedDate.getDate() + 7);
+            break;
+          case 'Enter':
+            e.preventDefault();
+            if (newNoteText.trim()) {
+              addNote();
+            }
+            break;
+        }
+        
+        if (newDate) {
+          onDateSelect(newDate);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [selectedDate, editingNote, newNoteText]);
 
   return (
     <div className="p-4">
@@ -77,7 +204,7 @@ const CalendarMonth = ({ year, month, monthName }: CalendarMonthProps) => {
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-medium text-gray-400 py-2"
+            className="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-2"
           >
             {day}
           </div>
@@ -88,7 +215,7 @@ const CalendarMonth = ({ year, month, monthName }: CalendarMonthProps) => {
       <div className="grid grid-cols-7 gap-1 mb-4">
         {/* Empty cells for days before month starts */}
         {emptyCells.map((_, index) => (
-          <div key={`empty-${index}`} className="h-8" />
+          <div key={`empty-${index}`} className="h-10" />
         ))}
         
         {/* Actual days */}
@@ -98,48 +225,71 @@ const CalendarMonth = ({ year, month, monthName }: CalendarMonthProps) => {
           const isPastDay = isPast(date) && !isCurrentDay;
           const isFutureDay = isFuture(date);
           const dayNotes = getDateNotes(date);
+          const dayHabits = getDateHabits(date);
           const isSelected = selectedDate && isSameDay(selectedDate, date);
+          
+          const highPriorityNotes = dayNotes.filter(n => n.priority === 'high');
+          const hasTimeSlots = dayNotes.some(n => n.timeSlot);
           
           return (
             <button
               key={format(date, "yyyy-MM-dd")}
               onClick={() => handleDateClick(date)}
               className={cn(
-                "h-8 w-8 text-xs rounded-sm transition-all duration-200 hover:scale-105 relative",
-                "flex items-center justify-center",
+                "h-10 w-full text-xs rounded-sm transition-all duration-200 hover:scale-105 relative",
+                "flex flex-col items-center justify-center p-1",
                 {
                   // Past days - muted
-                  "text-gray-300 bg-gray-50 hover:bg-gray-100": isPastDay,
+                  "text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700": isPastDay,
                   
                   // Today - highlighted
                   "bg-blue-500 text-white font-medium shadow-md": isCurrentDay,
                   
                   // Future days - normal
-                  "text-gray-700 hover:bg-gray-100 hover:text-gray-900": isFutureDay,
+                  "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100": isFutureDay,
                   
                   // Selected date
-                  "ring-2 ring-blue-300": isSelected,
+                  "ring-2 ring-blue-300 dark:ring-blue-500": isSelected,
                 }
               )}
             >
-              {dayNumber}
-              {/* Note indicators */}
-              {dayNotes.length > 0 && (
-                <div className="absolute -top-1 -right-1 flex">
-                  {dayNotes.slice(0, 3).map((note, index) => (
-                    <div
-                      key={note.id}
-                      className={cn(
-                        "w-1.5 h-1.5 rounded-full ml-0.5",
-                        categories[note.category].color
-                      )}
-                    />
-                  ))}
-                  {dayNotes.length > 3 && (
-                    <div className="w-1.5 h-1.5 rounded-full ml-0.5 bg-gray-400" />
-                  )}
-                </div>
-              )}
+              <span className="font-medium">{dayNumber}</span>
+              
+              {/* Note and habit indicators */}
+              <div className="flex items-center justify-center gap-0.5 mt-0.5">
+                {/* High priority indicator */}
+                {highPriorityNotes.length > 0 && (
+                  <AlertCircle className="w-2 h-2 text-red-500" />
+                )}
+                
+                {/* Time slot indicator */}
+                {hasTimeSlots && (
+                  <Clock className="w-2 h-2 text-blue-500" />
+                )}
+                
+                {/* Note dots */}
+                {dayNotes.slice(0, 2).map((note, index) => (
+                  <div
+                    key={note.id}
+                    className={cn(
+                      "w-1 h-1 rounded-full",
+                      categories[note.category].color
+                    )}
+                  />
+                ))}
+                
+                {/* Habit indicators */}
+                {dayHabits.slice(0, 1).map((habit) => (
+                  <div
+                    key={habit.id}
+                    className={cn("w-1 h-1 rounded-full", habit.color)}
+                  />
+                ))}
+                
+                {(dayNotes.length + dayHabits.length) > 3 && (
+                  <div className="w-1 h-1 rounded-full bg-gray-400" />
+                )}
+              </div>
             </button>
           );
         })}
@@ -147,14 +297,32 @@ const CalendarMonth = ({ year, month, monthName }: CalendarMonthProps) => {
 
       {/* Note section for selected date */}
       {selectedDate && (
-        <div className="space-y-3">
-          <div className="border-t pt-3">
+        <div className="space-y-3 animate-fade-in">
+          <div className="border-t pt-3 border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-medium text-gray-700">
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {format(selectedDate, "MMMM d, yyyy")}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
                 {getSelectedDateNotes().length} note{getSelectedDateNotes().length !== 1 ? 's' : ''}
+              </div>
+            </div>
+
+            {/* Quick templates */}
+            <div className="mb-3">
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Quick add:</div>
+              <div className="flex gap-1 flex-wrap">
+                {noteTemplates.map((template, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addTemplate(template)}
+                    className="h-6 px-2 text-xs"
+                  >
+                    {template.text}
+                  </Button>
+                ))}
               </div>
             </div>
 
@@ -164,23 +332,76 @@ const CalendarMonth = ({ year, month, monthName }: CalendarMonthProps) => {
                 {getSelectedDateNotes().map((note) => (
                   <div
                     key={note.id}
-                    className="flex items-start gap-2 p-2 bg-gray-50 rounded text-xs"
+                    className="flex items-start gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs"
                   >
-                    <div className={cn("w-2 h-2 rounded-full mt-1", categories[note.category].color)} />
-                    <div className="flex-1">
-                      <div className="text-gray-800">{note.text}</div>
-                      <div className="text-gray-500 text-xs mt-1">
-                        {categories[note.category].label}
-                      </div>
+                    <div className="flex items-center gap-1 mt-1">
+                      <div className={cn("w-2 h-2 rounded-full", categories[note.category].color)} />
+                      <div className={cn("w-1.5 h-1.5 rounded-full", priorityColors[note.priority])} />
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteNote(note.id)}
-                      className="h-6 w-6 p-0 text-gray-400 hover:text-red-500"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+                    
+                    <div className="flex-1">
+                      {editingNote === note.id ? (
+                        <div className="space-y-2">
+                          <Textarea
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            className="min-h-[60px] text-xs"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && e.ctrlKey) {
+                                saveEdit();
+                              }
+                            }}
+                          />
+                          <div className="flex gap-1">
+                            <Button size="sm" onClick={saveEdit} className="h-6 px-2 text-xs">
+                              Save
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={cancelEdit} className="h-6 px-2 text-xs">
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between">
+                            <div className="text-gray-800 dark:text-gray-200">{note.text}</div>
+                            <div className="flex gap-1 ml-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startEditing(note)}
+                                className="h-5 w-5 p-0 text-gray-400 hover:text-blue-500"
+                              >
+                                <Edit3 className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onNoteDelete(note.id)}
+                                className="h-5 w-5 p-0 text-gray-400 hover:text-red-500"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs mt-1">
+                            <span>{categories[note.category].label}</span>
+                            <span>•</span>
+                            <span className="capitalize">{note.priority} priority</span>
+                            {note.timeSlot && (
+                              <>
+                                <span>•</span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {note.timeSlot}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -192,19 +413,38 @@ const CalendarMonth = ({ year, month, monthName }: CalendarMonthProps) => {
                 <select
                   value={newNoteCategory}
                   onChange={(e) => setNewNoteCategory(e.target.value as Note['category'])}
-                  className="text-xs border border-gray-200 rounded px-2 py-1"
+                  className="text-xs border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700"
                 >
                   {Object.entries(categories).map(([key, { label }]) => (
                     <option key={key} value={key}>{label}</option>
                   ))}
                 </select>
+                
+                <select
+                  value={newNotePriority}
+                  onChange={(e) => setNewNotePriority(e.target.value as Note['priority'])}
+                  className="text-xs border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700"
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+                
+                <input
+                  type="time"
+                  value={newNoteTimeSlot}
+                  onChange={(e) => setNewNoteTimeSlot(e.target.value)}
+                  className="text-xs border border-gray-200 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700"
+                  placeholder="Time"
+                />
               </div>
+              
               <div className="flex gap-2">
-                <textarea
-                  placeholder="Add a note for this day..."
+                <Textarea
+                  placeholder="Add a note for this day... (Press Enter to save)"
                   value={newNoteText}
                   onChange={(e) => setNewNoteText(e.target.value)}
-                  className="flex-1 text-xs border border-gray-200 rounded px-2 py-1 resize-none"
+                  className="flex-1 text-xs resize-none min-h-[60px]"
                   rows={2}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -218,9 +458,9 @@ const CalendarMonth = ({ year, month, monthName }: CalendarMonthProps) => {
                   size="sm"
                   onClick={addNote}
                   disabled={!newNoteText.trim()}
-                  className="h-8 px-2"
+                  className="h-12 px-3"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-4 h-4" />
                 </Button>
               </div>
             </div>
