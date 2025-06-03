@@ -6,7 +6,8 @@ import WeekView from "./WeekView";
 import HabitTracker from "./HabitTracker";
 import NoteSearch from "./NoteSearch";
 import StatsDashboard from "./StatsDashboard";
-import { ChevronLeft, ChevronRight, Target, Plus, Settings, Search, Calendar, Users, Moon, Sun, Download } from "lucide-react";
+import Settings from "./Settings";
+import { ChevronLeft, ChevronRight, Target, Plus, Settings as SettingsIcon, Search, Calendar, Users, Moon, Sun, Download, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -20,6 +21,7 @@ const CalendarYear = () => {
   const [showHabits, setShowHabits] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   
   const [notes, setNotes] = useState<Note[]>([]);
@@ -69,6 +71,7 @@ const CalendarYear = () => {
       
       if (e.key === 'Escape') {
         setShowSearch(false);
+        setShowSettings(false);
         setSelectedDate(null);
       }
     };
@@ -240,6 +243,30 @@ const CalendarYear = () => {
     URL.revokeObjectURL(url);
   };
 
+  // Import functionality
+  const importData = (data: any) => {
+    if (data.notes) setNotes(data.notes);
+    if (data.goals) setGoals(data.goals);
+    if (data.habits) setHabits(data.habits);
+    if (data.settings) updateSettings(data.settings);
+  };
+
+  // Clear all data
+  const clearAllData = () => {
+    setNotes([]);
+    setGoals({ personal: [], professional: [], creative: [] });
+    setHabits([]);
+    localStorage.removeItem('calendar-app-data');
+  };
+
+  // Go to today
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentYear(today.getFullYear());
+    setCurrentDate(today);
+    setSelectedDate(today);
+  };
+
   const getCompletionStats = () => {
     const allGoals = Object.values(goals).flat();
     const completed = allGoals.filter(g => g.completed).length;
@@ -250,147 +277,184 @@ const CalendarYear = () => {
   const stats = getCompletionStats();
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 md:p-8 space-y-6 transition-colors duration-200">
+    <div className="w-full max-w-7xl mx-auto p-3 md:p-6 lg:p-8 space-y-4 md:space-y-6 transition-colors duration-200">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl md:text-4xl font-light tracking-wider text-gray-800 dark:text-gray-200">
-            PLAN THE THINGS <span className="text-gray-400">//</span> DO THE THINGS
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Your personal planning companion</p>
-        </div>
-        
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowStats(!showStats)}
-            className="flex items-center gap-2"
-          >
-            <Calendar className="w-4 h-4" />
-            Stats
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowSearch(true)}
-            className="flex items-center gap-2"
-          >
-            <Search className="w-4 h-4" />
-            Search
-            <span className="text-xs text-gray-400">⌘K</span>
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowGoals(!showGoals)}
-            className="flex items-center gap-2"
-          >
-            <Target className="w-4 h-4" />
-            Goals
-            {stats.total > 0 && (
-              <span className="ml-2 px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded-full">
-                {stats.completed}/{stats.total}
-              </span>
-            )}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowHabits(!showHabits)}
-            className="flex items-center gap-2"
-          >
-            <Users className="w-4 h-4" />
-            Habits
-          </Button>
-
-          <div className="flex items-center gap-1 border-l pl-2 border-gray-200 dark:border-gray-700">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleTheme}
-              className="h-8 w-8 p-0"
-            >
-              {settings.theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={exportData}
-              className="h-8 w-8 p-0"
-            >
-              <Download className="w-4 h-4" />
-            </Button>
+      <div className="flex flex-col space-y-4">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+          <div className="text-center lg:text-left">
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light tracking-wider text-gray-800 dark:text-gray-200">
+              PLAN THE THINGS <span className="text-gray-400">//</span> DO THE THINGS
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2">Your personal planning companion</p>
           </div>
           
-          <div className="flex items-center gap-2 border-l pl-2 border-gray-200 dark:border-gray-700">
-            <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded p-1">
+          {/* Mobile-first button layout */}
+          <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 w-full lg:w-auto">
+            {/* Primary actions */}
+            <div className="flex items-center gap-2 order-1">
               <Button
-                variant={settings.view === 'year' ? 'default' : 'ghost'}
+                variant="ghost"
                 size="sm"
-                onClick={() => updateSettings({ view: 'year' })}
-                className="h-7 px-2 text-xs"
+                onClick={goToToday}
+                className="flex items-center gap-2 text-xs sm:text-sm"
               >
-                Year
+                <Home className="w-4 h-4" />
+                <span className="hidden sm:inline">Today</span>
               </Button>
+
               <Button
-                variant={settings.view === 'week' ? 'default' : 'ghost'}
+                variant="ghost"
                 size="sm"
-                onClick={() => updateSettings({ view: 'week' })}
-                className="h-7 px-2 text-xs"
+                onClick={() => setShowStats(!showStats)}
+                className="flex items-center gap-2 text-xs sm:text-sm"
               >
-                Week
+                <Calendar className="w-4 h-4" />
+                <span className="hidden sm:inline">Stats</span>
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSearch(true)}
+                className="flex items-center gap-2 text-xs sm:text-sm"
+              >
+                <Search className="w-4 h-4" />
+                <span className="hidden sm:inline">Search</span>
+                <span className="text-xs text-gray-400 hidden md:inline">⌘K</span>
               </Button>
             </div>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentYear(currentYear - 1)}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            
-            <h2 className="text-xl md:text-3xl font-light tracking-widest text-gray-700 dark:text-gray-300 min-w-[140px] text-center">
-              {getYearText(currentYear)}
-            </h2>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentYear(currentYear + 1)}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+
+            {/* Secondary actions */}
+            <div className="flex items-center gap-2 order-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowGoals(!showGoals)}
+                className="flex items-center gap-2 text-xs sm:text-sm"
+              >
+                <Target className="w-4 h-4" />
+                <span className="hidden sm:inline">Goals</span>
+                {stats.total > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded-full">
+                    {stats.completed}/{stats.total}
+                  </span>
+                )}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowHabits(!showHabits)}
+                className="flex items-center gap-2 text-xs sm:text-sm"
+              >
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Habits</span>
+              </Button>
+            </div>
+
+            {/* Theme and settings */}
+            <div className="flex items-center gap-1 border-l pl-2 border-gray-200 dark:border-gray-700 order-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleTheme}
+                className="h-8 w-8 p-0"
+              >
+                {settings.theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={exportData}
+                className="h-8 w-8 p-0"
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSettings(true)}
+                className="h-8 w-8 p-0"
+              >
+                <SettingsIcon className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* View toggle and year navigation */}
+            <div className="flex items-center gap-2 border-l pl-2 border-gray-200 dark:border-gray-700 order-4 w-full sm:w-auto justify-center sm:justify-start">
+              <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded p-1">
+                <Button
+                  variant={settings.view === 'year' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => updateSettings({ view: 'year' })}
+                  className="h-7 px-2 text-xs"
+                >
+                  Year
+                </Button>
+                <Button
+                  variant={settings.view === 'week' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => updateSettings({ view: 'week' })}
+                  className="h-7 px-2 text-xs"
+                >
+                  Week
+                </Button>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentYear(currentYear - 1)}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                
+                <h2 className="text-sm sm:text-lg md:text-xl lg:text-2xl font-light tracking-widest text-gray-700 dark:text-gray-300 min-w-[100px] sm:min-w-[140px] text-center">
+                  <span className="hidden sm:inline">{getYearText(currentYear)}</span>
+                  <span className="sm:hidden">{currentYear}</span>
+                </h2>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentYear(currentYear + 1)}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Statistics Dashboard */}
       {showStats && (
-        <StatsDashboard 
-          notes={notes}
-          goals={goals}
-          habits={habits}
-        />
+        <div className="animate-fade-in">
+          <StatsDashboard 
+            notes={notes}
+            goals={goals}
+            habits={habits}
+          />
+        </div>
       )}
 
       {/* Progress Overview */}
       {stats.total > 0 && (
         <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <h3 className="font-medium text-gray-800 dark:text-gray-200">{currentYear} Progress</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{stats.completed} of {stats.total} goals completed</p>
+                <h3 className="font-medium text-gray-800 dark:text-gray-200 text-sm sm:text-base">{currentYear} Progress</h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{stats.completed} of {stats.total} goals completed</p>
               </div>
-              <div className="text-right">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.percentage}%</div>
-                <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-1">
+              <div className="text-left sm:text-right w-full sm:w-auto">
+                <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.percentage}%</div>
+                <div className="w-full sm:w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full mt-1">
                   <div 
                     className="h-full bg-blue-500 rounded-full transition-all duration-300"
                     style={{ width: `${stats.percentage}%` }}
@@ -402,24 +466,28 @@ const CalendarYear = () => {
         </Card>
       )}
 
-      {/* Goals and Habits Panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Goals and Habits Panels - Responsive grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
         {showGoals && (
-          <GoalPanel 
-            goals={goals}
-            onToggle={toggleGoal}
-            onAdd={addGoal}
-            onUpdateProgress={updateGoalProgress}
-          />
+          <div className="animate-slide-in">
+            <GoalPanel 
+              goals={goals}
+              onToggle={toggleGoal}
+              onAdd={addGoal}
+              onUpdateProgress={updateGoalProgress}
+            />
+          </div>
         )}
         
         {showHabits && (
-          <HabitTracker
-            habits={habits}
-            onHabitAdd={addHabit}
-            onHabitDelete={deleteHabit}
-            onHabitToggle={toggleHabit}
-          />
+          <div className="animate-slide-in">
+            <HabitTracker
+              habits={habits}
+              onHabitAdd={addHabit}
+              onHabitDelete={deleteHabit}
+              onHabitToggle={toggleHabit}
+            />
+          </div>
         )}
       </div>
 
@@ -434,20 +502,27 @@ const CalendarYear = () => {
           onHabitToggle={toggleHabit}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {months.map((month, index) => (
             <Card key={month} className="overflow-hidden hover:shadow-lg transition-all duration-200">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h3 className="text-sm font-medium tracking-wider text-gray-600 dark:text-gray-400">
+                    <h3 className="text-xs sm:text-sm font-medium tracking-wider text-gray-600 dark:text-gray-400">
                       {month}
                     </h3>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                       {monthNames[index]} {currentYear}
                     </p>
                   </div>
-                  <Settings className="w-4 h-4 text-gray-400" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowSettings(true)}
+                    className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
+                  >
+                    <SettingsIcon className="w-4 h-4" />
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -470,7 +545,7 @@ const CalendarYear = () => {
         </div>
       )}
 
-      {/* Search Modal */}
+      {/* Modals */}
       <NoteSearch
         notes={notes}
         onNoteSelect={(note) => {
@@ -482,15 +557,23 @@ const CalendarYear = () => {
         onClose={() => setShowSearch(false)}
       />
 
+      <Settings
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        onExport={exportData}
+        onImport={importData}
+        onClearData={clearAllData}
+      />
+
       {/* Footer */}
-      <div className="mt-12 text-center border-t pt-8 border-gray-200 dark:border-gray-700">
+      <div className="mt-8 md:mt-12 text-center border-t pt-6 md:pt-8 border-gray-200 dark:border-gray-700">
         <p className="text-xs text-gray-400 dark:text-gray-500 tracking-wider mb-2">
           PLAN • EXECUTE • ACHIEVE
         </p>
         <p className="text-xs text-gray-300 dark:text-gray-600">
           Built with ❤️ for productivity enthusiasts
         </p>
-        <div className="text-xs text-gray-300 dark:text-gray-600 mt-2 space-x-4">
+        <div className="text-xs text-gray-300 dark:text-gray-600 mt-2 flex flex-wrap justify-center gap-2 sm:gap-4">
           <span>⌘K Search</span>
           <span>⌘G Goals</span>
           <span>⌘H Habits</span>

@@ -198,13 +198,13 @@ const CalendarMonth = ({
   }, [selectedDate, editingNote, newNoteText]);
 
   return (
-    <div className="p-4">
+    <div className="p-2 sm:p-4">
       {/* Week day headers */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-2">
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-2"
+            className="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-1 sm:py-2"
           >
             {day}
           </div>
@@ -212,10 +212,10 @@ const CalendarMonth = ({
       </div>
 
       {/* Calendar days */}
-      <div className="grid grid-cols-7 gap-1 mb-4">
+      <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-4">
         {/* Empty cells for days before month starts */}
         {emptyCells.map((_, index) => (
-          <div key={`empty-${index}`} className="h-10" />
+          <div key={`empty-${index}`} className="h-8 sm:h-10" />
         ))}
         
         {/* Actual days */}
@@ -236,8 +236,8 @@ const CalendarMonth = ({
               key={format(date, "yyyy-MM-dd")}
               onClick={() => handleDateClick(date)}
               className={cn(
-                "h-10 w-full text-xs rounded-sm transition-all duration-200 hover:scale-105 relative",
-                "flex flex-col items-center justify-center p-1",
+                "h-8 sm:h-10 w-full text-xs rounded-sm transition-all duration-200 hover:scale-105 relative",
+                "flex flex-col items-center justify-center p-0.5 sm:p-1",
                 {
                   // Past days - muted
                   "text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700": isPastDay,
@@ -253,18 +253,18 @@ const CalendarMonth = ({
                 }
               )}
             >
-              <span className="font-medium">{dayNumber}</span>
+              <span className="font-medium text-xs sm:text-sm">{dayNumber}</span>
               
               {/* Note and habit indicators */}
               <div className="flex items-center justify-center gap-0.5 mt-0.5">
                 {/* High priority indicator */}
                 {highPriorityNotes.length > 0 && (
-                  <AlertCircle className="w-2 h-2 text-red-500" />
+                  <AlertCircle className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-red-500" />
                 )}
                 
                 {/* Time slot indicator */}
                 {hasTimeSlots && (
-                  <Clock className="w-2 h-2 text-blue-500" />
+                  <Clock className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-blue-500" />
                 )}
                 
                 {/* Note dots */}
@@ -308,7 +308,7 @@ const CalendarMonth = ({
               </div>
             </div>
 
-            {/* Quick templates */}
+            {/* Quick templates - responsive layout */}
             <div className="mb-3">
               <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Quick add:</div>
               <div className="flex gap-1 flex-wrap">
@@ -318,7 +318,7 @@ const CalendarMonth = ({
                     variant="outline"
                     size="sm"
                     onClick={() => addTemplate(template)}
-                    className="h-6 px-2 text-xs"
+                    className="h-6 px-2 text-xs flex-shrink-0"
                   >
                     {template.text}
                   </Button>
@@ -334,12 +334,12 @@ const CalendarMonth = ({
                     key={note.id}
                     className="flex items-start gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded text-xs"
                   >
-                    <div className="flex items-center gap-1 mt-1">
+                    <div className="flex items-center gap-1 mt-1 flex-shrink-0">
                       <div className={cn("w-2 h-2 rounded-full", categories[note.category].color)} />
                       <div className={cn("w-1.5 h-1.5 rounded-full", priorityColors[note.priority])} />
                     </div>
                     
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       {editingNote === note.id ? (
                         <div className="space-y-2">
                           <Textarea
@@ -363,9 +363,9 @@ const CalendarMonth = ({
                         </div>
                       ) : (
                         <>
-                          <div className="flex items-start justify-between">
-                            <div className="text-gray-800 dark:text-gray-200">{note.text}</div>
-                            <div className="flex gap-1 ml-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="text-gray-800 dark:text-gray-200 break-words">{note.text}</div>
+                            <div className="flex gap-1 flex-shrink-0">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -385,13 +385,13 @@ const CalendarMonth = ({
                             </div>
                           </div>
                           
-                          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs mt-1">
+                          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-xs mt-1 flex-wrap">
                             <span>{categories[note.category].label}</span>
-                            <span>•</span>
+                            <span className="hidden sm:inline">•</span>
                             <span className="capitalize">{note.priority} priority</span>
                             {note.timeSlot && (
                               <>
-                                <span>•</span>
+                                <span className="hidden sm:inline">•</span>
                                 <span className="flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
                                   {note.timeSlot}
@@ -407,9 +407,9 @@ const CalendarMonth = ({
               </div>
             )}
 
-            {/* Add new note */}
+            {/* Add new note - responsive layout */}
             <div className="space-y-2">
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <select
                   value={newNoteCategory}
                   onChange={(e) => setNewNoteCategory(e.target.value as Note['category'])}
@@ -458,7 +458,7 @@ const CalendarMonth = ({
                   size="sm"
                   onClick={addNote}
                   disabled={!newNoteText.trim()}
-                  className="h-12 px-3"
+                  className="h-12 px-3 flex-shrink-0"
                 >
                   <Plus className="w-4 h-4" />
                 </Button>
