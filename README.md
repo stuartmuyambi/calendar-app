@@ -2,18 +2,18 @@
 
 A feature-rich calendar application built with React, TypeScript, and Tailwind CSS. This application helps users manage their schedule, track habits, set goals, and stay organized with a beautiful and intuitive interface.
 
-## ✨ Features
+##  Features
 
-- 📅 Multiple calendar views (Year, Month, Week)
-- 🎯 Goal tracking and progress monitoring
-- 🔄 Habit tracking with streaks
-- 🌙 Dark/Light theme support
-- 🔍 Quick search functionality
-- 📱 Responsive design for all devices
-- 📊 Stats dashboard
-- 💾 Data import/export capabilities
+-  Multiple calendar views (Year, Month, Week)
+-  Goal tracking and progress monitoring
+-  Habit tracking with streaks
+-  Dark/Light theme support
+-  Quick search functionality
+-  Responsive design for all devices
+-  Stats dashboard
+-  Data import/export capabilities
 
-## 🚀 Tech Stack
+##  Tech Stack
 
 - **Frontend Framework**: React with TypeScript
 - **Styling**: Tailwind CSS with custom animations
@@ -23,14 +23,14 @@ A feature-rich calendar application built with React, TypeScript, and Tailwind C
 - **Build Tool**: Vite
 - **State Management**: React Context API
 
-## ⚡️ Keyboard Shortcuts
+##  Keyboard Shortcuts
 
 - `⌘K` - Open Search
 - `⌘G` - Toggle Goals Panel
 - `⌘H` - Toggle Habits Panel
 - `⌘D` - Toggle Dark Mode
 
-## 🛠️ Installation
+##  Installation
 
 1. Clone the repository
 ```bash
@@ -48,7 +48,7 @@ npm install
 npm run dev
 ```
 
-## 🎨 Customization
+##  Customization
 
 ### Theme Customization
 The app supports both light and dark themes with customizable color schemes. Colors can be adjusted in the `src/index.css` file:
@@ -65,26 +65,26 @@ The app supports both light and dark themes with customizable color schemes. Col
 ### Adding Custom Categories
 Users can add custom categories for notes and goals through the settings panel.
 
-## 📦 Data Management
+##  Data Management
 
 - **Local Storage**: All data is stored locally in the browser
 - **Data Export**: Export your data as JSON for backup
 - **Data Import**: Import previously exported data
 - **Data Reset**: Option to clear all data and start fresh
 
-## 🔐 Privacy
+##  Privacy
 
 All data is stored locally on your device. No data is sent to any external servers.
 
-## 🤝 Contributing
+##  Contributing
 
 Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
 
-## 📝 License
+##  License
 
 This project is [MIT](LICENSE) licensed.
 
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - Built with [Radix UI](https://www.radix-ui.com/)
 - Icons by [Lucide](https://lucide.dev/)
