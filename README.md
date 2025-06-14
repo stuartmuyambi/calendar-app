@@ -2,6 +2,8 @@
 
 A feature-rich calendar application built with React, TypeScript, and Tailwind CSS. This application helps users manage their schedule, track habits, set goals, and stay organized with a beautiful and intuitive interface.
 
+**[Try the app online →](https://https://calendar-ppn5zfy9g-stuart-muyambis-projects.vercel.app/)** 
+
 ##  Features
 
 -  Multiple calendar views (Year, Month, Week)
